@@ -7,6 +7,36 @@ import numpy as np
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+clauses = []
+comments = []
+cnf_num_variables = 0
+cnf_num_clauses = 0
+
+
+def sat_from_file(file_location):
+    with lzma.open(file_location, mode='rt') as file:
+        for line in file:
+            # clean each line
+            line = line.replace('\n', '').replace(' 0', '')
+
+            # get clauses
+            if len(line) > 0 and not line.startswith('p') and not line.startswith('c'):
+                global clauses
+                clauses.append(line)
+                # g.add_clause((line.replace('\n', '').replace(' 0', '')))
+
+            # get comments
+            if len(line) > 0 and line.startswith('p') or line.startswith('c'):
+                if line.startswith('p'):
+                    data = line.split(' ')
+                    global cnf_num_variables
+                    cnf_num_variables = int(data[2])
+                    global cnf_num_clauses
+                    cnf_num_clauses = int(data[3])
+
+                global comments
+                comments.append(line)
+
 
 def find_max_variable(clauses):
     """
@@ -45,38 +75,22 @@ if __name__ == '__main__':
     # )
 
     args = parser.parse_args()
-    file_location = "../InstanciasSAT/sc14-crafted/edges-072-3-7923777-13.cnf.lzma"
+    # 4 SAT
+    # file_location = "../InstanciasSAT/sc14-crafted/ccp-s5-facto4.cnf.lzma"
 
-    clauses = []
-    comments = []
-    cnf_num_variables = 0
-    cnf_num_clauses = 0
-    cnf_max_variable = 0
-    # g = Glucose3()
+    # 2 SAT
+    # file_location = "../InstanciasSAT/sc14-crafted/sgen6-1440-5-1.cnf.lzma"
 
-    with lzma.open(file_location, mode='rt') as file:
-        for line in file:
-            # clean each line
-            line = line.replace('\n', '').replace(' 0', '')
+    # 1 SAT
+    file_location = "../InstanciasSAT/sc14-crafted/hid-uns-enc-6-1-0-0-0-0-2907.cnf.lzma"
 
-            # get clauses
-            if len(line) > 0 and not line.startswith('p') and not line.startswith('c'):
-                clauses.append(line)
-                # g.add_clause((line.replace('\n', '').replace(' 0', '')))
+    sat_from_file(file_location)
 
-            # get comments
-            if len(line) > 0 and line.startswith('p') or line.startswith('c'):
-                if line.startswith('p'):
-                    data = line.split(' ')
-                    cnf_num_variables = int(data[2])
-                    cnf_num_clauses = int(data[3])
-                comments.append(line)
-
-    # TODO: Maybe we can use numpy
-    # TODO: delete INT
     reduced_clauses = []
     # we use this to keep the amount of all variables added
     total_num_variables = cnf_num_variables
+
+    x_sat = 3
 
     # reduce SAT to 3-SAT
     for clause in clauses:
@@ -88,74 +102,97 @@ if __name__ == '__main__':
         # 1. clause have 1 literal
         if count_literals == 1:
             # introduce 2 new variables
-            total_num_variables = total_num_variables + 2
-            # replace Ci with a conjunction of those two new variables
-            literal = int(literals[0])
-            var1 = total_num_variables-1
-            var2 = total_num_variables
+            num_variables = x_sat - 1
+            num_clauses = x_sat + 1
 
-            reduced_clauses.append('{} {} {}'.format(literal, var1, var2))
-            reduced_clauses.append([literal, -var1, var2])
-            reduced_clauses.append([literal, var1, -var2])
-            reduced_clauses.append([literal, -var1, -var2])
+            new_variables = [
+                (total_num_variables+i+1)
+                for i in range(num_variables)
+            ]
 
-        # 2. clause have 2 literals
-        if count_literals == 2:
-            # introduce 1 new variables
-            total_num_variables = total_num_variables + 1
-            # replace Ci with a conjunction of those two new variables
-            literal1 = int(literals[0])
-            literal2 = int(literals[1])
-            var1 = total_num_variables
-
-            reduced_clauses.append('{} {} {}'.format(literal1, literal2, var1))
-            reduced_clauses.append(
-                '{} {} {}'.format(literal1, literal2, -var1))
-
-        # 3. clause have 3 literals
-        if count_literals == 3:
-            literal1 = int(literals[0])
-            literal2 = int(literals[1])
-            literal3 = int(literals[2])
-            reduced_clauses.append('{} {} {}'.format(
-                literal1, literal2, literal3))
-
-        # 3. clause have more than 4 literals
-        if count_literals > 3:
-            # introduce k-3 new variables
-            # introduce k-2 new clauses
-            new_variables = count_literals-3
-            new_clauses = count_literals-2
-            total_num_variables = total_num_variables + new_variables
-
-            # replace Ci with a conjunction of those new_variables
-            literal1 = int(literals[0])
-            literal2 = int(literals[1])
-            literal_k_1 = int(literals[count_literals-1])
-            literal_k = int(literals[count_literals])
+            # add those new variables to the total
+            total_num_variables = total_num_variables + num_variables
 
             i = 0
-            while i < new_clauses:
-                if i == 0:
-                    reduced_clauses.append(
-                        '{} {} {}'.format(literals[i], literals[i+1], total_num_variables-new_variables+1))
-                elif i == new_clauses-1:
-                    reduced_clauses.append(
-                        '{} {} {}'.format(-total_num_variables, literals[i+1], literals[i+2]))
-                elif i % 2 == 0:
-                    reduced_clauses.append(
-                        '{} {} {}'.format(total_num_variables-new_variables+1, literals[i+1], -(total_num_variables-new_variables+2)))
-                else:
-                    reduced_clauses.append(
-                        '{} {} {}'.format(-total_num_variables-new_variables+1, literals[i+1], total_num_variables-new_variables+2))
+            while i < num_clauses:
+                tmp = []
+                init = [str(var) for var in new_variables]
+                j = 0
 
-                i += 1
+                for var in new_variables:
+                    if i == j:
+                        tmp.append(str(-var))
+                    else:
+                        if i+1 == num_clauses:
+                            tmp.append(str(-var))
+                        else:
+                            tmp.append(str(var))
+
+                    j = j+1
+
+                reduced_clauses.append(', '.join(literals + tmp))
+                i = i+1
+
+        # # 2. clause have 2 literals
+        # if count_literals == 2:
+        #     # introduce 1 new variables
+        #     num_variables = 1
+
+        #     new_variables = [
+        #         (total_num_variables+i+1)
+        #         for i in range(num_variables)
+        #     ]
+
+        #     # add those new variables to the total
+        #     total_num_variables = total_num_variables + num_variables
+
+        #     reduced_clauses.append('{} {} {}'.format(
+        #         literals[0], literals[1], new_variables[0]))
+        #     reduced_clauses.append('{} {} {}'.format(
+        #         literals[0], literals[1], -new_variables[0]))
+
+        # # 3. clause have 3 literals
+        # if count_literals == 3:
+        #     reduced_clauses.append(', '.join(literals))
+
+        # # 4. clause have more than 4 literals
+        # if count_literals > 3:
+        #     # introduce k-3 new variables
+        #     # introduce k-2 new clauses
+        #     num_variables = count_literals-3
+        #     num_clauses = count_literals-2
+
+        #     new_variables = [
+        #         (total_num_variables+i+1)
+        #         for i in range(num_variables)
+        #     ]
+
+        #     # add those new variables to the total
+        #     total_num_variables = total_num_variables + num_variables
+
+        #     i = 0
+        #     while i < num_clauses:
+        #         # for literal in literals:
+        #         #     new_clause = new_clause +
+
+        #         if i == 0:
+        #             reduced_clauses.append(
+        #                 '{} {} {}'.format(literals[i], literals[i+1], new_variables[i]))
+
+        #         if i == num_clauses-1:
+        #             reduced_clauses.append(
+        #                 '{} {} {}'.format(-new_variables[num_variables-1], literals[count_literals-2], literals[count_literals-1]))
+
+        #         if i != 0 and i != num_clauses-1:
+        #             reduced_clauses.append(
+        #                 '{} {} {}'.format(-new_variables[i-1], literals[i+2], new_variables[i]))
+
+        #         i += 1
 
     # print(g.solve())
     # print(g.get_model())
 
-    print(clauses)
+    # print(clauses)
     # find_max_variable(clauses)
     print(reduced_clauses)
-    # print(cnf_num_variables)
     # print(cnf_num_clauses)
