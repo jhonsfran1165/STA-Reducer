@@ -14,11 +14,12 @@ IFS="$(printf "\n\t")"
 # ---- End unofficial bash strict mode boilerplate
 
 XSAT=$1
+# ${file_path##*/}
 
 git ls-files | (grep -E '(^|/)InstanciasSAT/sc14-crafted' || true) | {
     while IFS= read -r file_path; do
         echo -n "reducing ${file_path}..."
-        python Reductor/reductor.py ${XSAT} "${file_path}" > "./X-SAT/${file_path##*/}.txt"
+        python Reductor/reductor.py ${XSAT} "${file_path}" "./X-SAT"
         echo -n "success..."
         echo ✓
     done

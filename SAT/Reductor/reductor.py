@@ -3,6 +3,8 @@ import logging
 import argparse
 import numpy as np
 # from pysat.solvers import Glucose3
+import os
+import time
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -62,6 +64,8 @@ def reduce_to_3sat():
 
     reduced_clauses = []
     # we use this to keep the amount of all variables added
+
+    global cnf_num_variables
     total_num_variables = cnf_num_variables
 
     # reduce SAT to 3-SAT
@@ -198,6 +202,9 @@ def reduce_to_3sat():
                     reduced_clauses.append(' '.join(tmp))
                 i = i+1
 
+    # After that we update the global variable
+    cnf_num_variables = total_num_variables
+
     return reduced_clauses
 
 
@@ -207,6 +214,7 @@ def three_sat_to_xsat(x_sat, sat_clauses):
     """
     transform_clauses = []
     # we use this to keep the amount of all variables added
+    global cnf_num_variables
     total_num_variables = cnf_num_variables
 
     # reduce 3-SAT to X-SAT
@@ -218,7 +226,11 @@ def three_sat_to_xsat(x_sat, sat_clauses):
 
         # introduce new variables and new clauses
         num_variables = x_sat - 3
-        num_clauses = x_sat - 1
+        # don't ask why but it works
+        if x_sat == 4:
+            num_clauses = num_variables+1
+        else:
+            num_clauses = num_variables+2
 
         # create an array with the variables we'll use later
         new_variables = [
@@ -277,40 +289,41 @@ if __name__ == '__main__':
         type=str
     )
 
+    parser.add_argument(
+        'folder_destination',
+        help='Please type the folder_destination where you wanna save the files to',
+        type=str
+    )
+
     args = parser.parse_args()
     x_sat = args.x_sat
     file_location = args.file_location
-
-    # 5 SAT
-    # file_location = "../InstanciasSAT/sc14-crafted/sgen6-840-5-1.cnf.lzma"
-
-    # 4 SAT
-    # file_location = "../InstanciasSAT/sc14-crafted/sgen4-sat-160-8.cnf.lzma"
-
-    # 3 SAT
-    # file_location = "../InstanciasSAT/sc14-crafted/edges-070-3-10062999-36.cnf.lzma"
-
-    # 2 SAT
-    # file_location = "../InstanciasSAT/sc14-crafted/sgen6-1440-5-1.cnf.lzma"
-
-    # 1 SAT
-    # file_location = "../InstanciasSAT/sc14-crafted/hid-uns-enc-6-1-0-0-0-0-2907.cnf.lzma"
+    folder_destination = args.folder_destination
+    filename = os.path.basename(file_location)
 
     sat_from_file(file_location)
-    reduced_clauses = reduce_to_3sat()
 
     if x_sat < 3:
-        logger.info('x_sat parameter has to be > 3. Error x_sat {} invalid'.format(x_sat))
+        logger.info(
+            'x_sat parameter has to be >= 3. Error x_sat {} invalid'.format(x_sat))
+
+    # start to measure time of the execution
+    start_time = time.time()
+    reduced_clauses = reduce_to_3sat()
 
     if x_sat == 3:
-        result = reduced_clauses
+        results = reduced_clauses
     else:
-        result = three_sat_to_xsat(x_sat, reduced_clauses)
+        results = three_sat_to_xsat(x_sat, reduced_clauses)
+    print("\n - %s seconds - " % (time.time() - start_time))
+    # finish time
+
+    fenv = open("{}/{}.txt".format(folder_destination, filename), "w")
+
+    for result in results:
+        fenv.write(result)
+        fenv.write("\n")
+    fenv.close()
 
     # print(g.solve())
     # print(g.get_model())
-
-    # print(clauses)
-    # find_max_variable(clauses)
-    print(result)
-    # print(cnf_num_clauses)
