@@ -1,7 +1,6 @@
 import lzma
 import logging
 import argparse
-import numpy as np
 # from pysat.solvers import Glucose3
 import os
 import time

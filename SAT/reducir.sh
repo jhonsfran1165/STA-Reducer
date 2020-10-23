@@ -13,7 +13,8 @@ set -o posix    # more strict failures in subshells
 IFS="$(printf "\n\t")"
 # ---- End unofficial bash strict mode boilerplate
 
-XSAT=$1
+PARAM=$1
+XSAT=$2
 # ${file_path##*/}
 
 git ls-files | (grep -E '(^|/)InstanciasSAT/sc14-crafted' || true) | {
