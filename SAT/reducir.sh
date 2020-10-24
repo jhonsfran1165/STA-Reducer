@@ -20,7 +20,7 @@ XSAT=$2
 git ls-files | (grep -E '(^|/)InstanciasSAT/sc14-crafted' || true) | {
     while IFS= read -r file_path; do
         echo -n "reducing ${file_path}..."
-        python Reductor/reductor.py ${XSAT} "${file_path}" "./X-SAT"
+        python Reductor/reductor.py ${XSAT} "${file_path}" "./X-SAT" >> "times.txt"
         echo -n "success..."
         echo ✓
     done

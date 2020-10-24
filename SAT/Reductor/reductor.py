@@ -314,7 +314,8 @@ if __name__ == '__main__':
         results = reduced_clauses
     else:
         results = three_sat_to_xsat(x_sat, reduced_clauses)
-    print("\n - %s seconds - " % (time.time() - start_time))
+    # print("\n - %s seconds - " % (time.time() - start_time))
+    print(time.time() - start_time)
     # finish time
 
     fenv = open("{}/{}.txt".format(folder_destination, filename), "w")
